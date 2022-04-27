@@ -1,0 +1,6 @@
+# Don't commit the pytest run artefacts
+__pycache__
+.pytest_cache
+
+# Don't commit local VS Code configuration
+.vscode

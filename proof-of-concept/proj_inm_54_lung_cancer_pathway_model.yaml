@@ -1,0 +1,652 @@
+---
+pathway: Lung cancer
+version: 0.1
+
+# A [pathway:] must have a name and a [version:]
+
+# A pathway consists of multiple steps [steps:]
+
+# There must be a start and an end step. Other steps must
+# have a unique name 
+
+# Each step consists of a name [name:], what it depends on [depends:]
+# and what to do next [actions:]
+
+# All actions [actions:] must also be a step.
+
+# All actions [actions:] are any combination of:
+# required [required:] (all), 
+# optional [optional:] (0+ of many)
+# optional exclusive [optional_exclusive:] (1 of many)
+# or optional inclusive [optional_inclusive:] (1+ of many)
+
+# ONE action type (required, optional, optional exclusive, or optional inclusive)
+# MUST be chosen
+
+# All dependencies must also be a step
+
+# All dependencies [depends:] are any combination of:
+# required [required:] (all), 
+# optional [optional:] (0+ of many)
+# optional exclusive [optional_exclusive:] (1 of many)
+# or optional inclusive [optional_inclusive:] (1+ of many)
+
+# ONE dependency type (required, optional, optional exclusive or optional inclusive)
+# MUST be chosen
+
+# Actions [actions:] occur (are initiated) only when the dependency [depends:]
+# conditions are fulfilled.
+
+steps:
+  start:
+    - name: Patient with lung cancer symptoms
+    - depends:
+      - required: 
+        - None
+      - optional:
+        - None
+      - optional_exclusive:
+        - None
+      - optional_inclusive:
+        - None
+    - actions:
+      - required: 
+        - gp_visit
+      - optional:
+        - None
+      - optional_exclusive:
+        - None
+      - optional_inclusive:
+        - None
+
+  gp_visit:
+    - name: Patient visits GP and GP reviews of patient's symptoms.
+    - depends:
+      - required: 
+        - start
+      - optional:
+        - None
+      - optional_exclusive:
+        - None
+      - optional_inclusive:
+        - None
+    - actions:
+      - required:
+        - gp_visit_decision
+      - optional:
+        - None
+      - optional_exclusive:
+        - None
+      - optional_inclusive:
+        - None
+
+  gp_visit_decision:
+    - name: Decide whether to investigate the symptoms.
+    - depends:
+      - required:
+        - gp_visit
+    - actions:
+      - optional_exclusive:
+        - gp_investigation # If GP feels that the symptoms merit investigation
+        - gp_discharge # If GP feels that the symptoms do not merit investigation
+
+  gp_investigation:
+    - name: Further investigation to decide whether to refer to lung pathway.
+    - depends: 
+      - required:
+        - gp_visit_decision
+    - actions:
+      - required:
+        - chest-xray
+
+  chest-xray:
+    - name: Chest-xray to determine if cancer is likely or unlikely.
+    - depends: 
+      - required:
+        - gp_investigation
+    - actions:
+      - required:
+        - chest-xray_reporting
+  
+  chest-xray_reporting:
+    - name: The reporting of the chest-xray
+    - depends:
+      - required: 
+        - chest-xray 
+    - actions:
+      - required:
+        - chest_xray_reporting_decision
+
+  chest_xray_reporting_decision:
+    - name: Radiologist determines from X-ray whether lung cancer is likely or unlikely.
+    - depends:
+      - required: 
+        - chest-xray_reporting
+    - actions:
+      - optional_exclusive:
+        - chest_xray_reporting_cancer_likely # If cancer is likely based on the chest X-ray
+        - chest_xray_reporting_cancer_unlikely # If cancer is unlikely based on the chest X-ray
+  
+  chest_xray_reporting_cancer_likely:
+    - name: Actions to follow if from chest X-ray that lung cancer is likely.
+    - depends: 
+      - required:
+        - chest_xray_reporting_decision
+    - actions:
+      - required:
+        - ct_thorax_booking
+
+  chest_xray_reporting_cancer_unlikely:
+    - name: Actions to follow if from chest X-ray that lung cancer is likely.
+    - depends:
+      - optional_exclusive:
+        - chest_xray_reporting_cancer_unlikely
+        - ct_thorax_reporting_cancer_unlikely
+    - actions:
+      - required:
+        - gp_referral_decision
+
+  ct_thorax_booking:
+    - name: Booking for CT-Thorax which patient attends
+    - depends:
+      - required:
+        - chest_xray_reporting_cancer_likely
+    - actions:
+      - required:
+        - ct_thorax
+
+  ct_thorax:
+    - name: CT-Thorax
+    - depends:
+      - required:
+        - ct_thorax_booking
+    - actions:
+      - required:
+        - ct_thorax_reporting
+
+  ct_thorax_reporting:
+    - name: The reporting of the GP CT-Thorax required.
+    - depends:
+      - required:
+        - ct_thorax
+    - actions:
+      - optional_exclusive:
+        - ct_thorax_reporting_cancer_likely
+        - ct_thorax_reporting_cancer_unlikely
+
+  ct_thorax_reporting_decision:
+    - name: The reporting of the CT-Thorax
+    - depends:
+      - required:
+        - ct_thorax_reporting
+    - actions:
+      - optional_exclusive:
+        - ct_thorax_reporting_cancer_likely
+        - ct_thorax_reporting_cancer_unlikely
+
+  ct_thorax_reporting_cancer_likely:
+    - name: Actions to undertake if cancer is likely on the CT-Thorax
+    - depends:
+      - required:
+        - ct_thorax
+    - actions:
+      - required:
+        - pathway_email_inbox
+        - gp_referral_decision
+  
+  ct_thorax_reporting_cancer_unlikely:
+    - name: Actions to undertake if cancer is unlikely on the CT-Thorax
+    - depends:
+      - required:
+        - ct_thorax_reporting
+    - actions:
+      - required:
+        - gp_referral_decision
+  
+  gp_referral_decision:
+    - name: GP decides whether to refer OR/ discharge. Discharge if lung cancer is unlikely. Refer onward if lung cancer likely or high suspicion of lung cancer irrespective of chest X-ray.
+    - depends:
+      - optional_inclusive:
+        - ct_thorax_reporting_cancer_likely
+        - chest_xray_reporting_cancer_likely
+        - chest_xray_reporting_cancer_unlikely
+    - actions:
+      - optional_exclusive:
+        - gp_referral_letter # If high suspicion OR/ CT Thorax reports likely lung cancer
+        - gp_discharge # If unlikely lung cancer
+      
+  gp_referral_letter:
+    - name: A letter the GP writes as part of the referral via eRS because of likely lung cancer OR/ high suspicion
+    - depends:
+      - required:
+        - gp_referral_decision
+    - actions:
+      - required:
+        - referral_ers
+
+  referral_ers:
+    - name: The referral via eRS. Contains a referral letter.
+    - depends:
+      - required:
+        - gp_referral_letter
+    - actions:
+      - required:
+        - pathway_booking_office_referral_ers
+
+  gp_discharge:
+    - name: GP discharging investigation into possible lung cancer.
+    - depends:
+      - required:
+        - chest_xray_reporting_decision
+    - actions:
+      - required:
+        - end
+
+  pathway_booking_office_referral_ers:
+    - name: The actions the pathway booking office does.
+    - depends:
+      - required:
+        - referral_ers
+    - actions:
+      - required:
+        - pathway_email_inbox
+  
+  pathway_email_inbox:
+    - name: Method for notifying the triage doctor for deciding whether to put patient onto lung cancer pathway. 
+    - depends:
+      - optional_inclusive:
+        - pathway_booking_office_referral_ers
+        - ct_thorax_reporting_cancer_likely
+    - actions:
+      - required:
+        - pathway_triage
+
+  pathway_triage:
+    - name: Triage doctor reviews evidence and makes gp_visit_decision
+    - depends:
+      - required:
+        - pathway_email_inbox
+    - actions:
+      - optional_exclusive:
+        - pathway_triage_cancer_suspected
+        - pathway_triage_cancer_suspected_not
+
+  pathway_triage_cancer_suspected_not:
+    - name: Actions to take if it is decided lung cancer is not suspected on the evidence to date.
+    - depends:
+      - required:
+        - pathway_triage
+    - actions:
+      - required:
+        - pathway_discharge
+
+  pathway_triage_cancer_suspected:
+    - name: Actions to take if it is decided lung cancer is suspected on the evidence to date.
+    - depends:
+      - required:
+        - pathway_triage
+    - actions:
+      - required:
+        - ct_chest_booking
+
+  ct_chest_booking:
+    - name: CT Chest
+    - depends:
+      - required:
+        - pathway_triage
+    - actions:
+      - required:
+        - ct_chest_reporting_decision
+
+  ct_chest_reporting_decision:
+    - name: The reporting of the CT-Chest
+    - depends:
+      - required:
+        - ct_chest_booking
+    - actions:
+      - optional_exclusive:
+        - pathway_cancer_confirmed
+        - pathway_cancer_confirmed_not
+
+  pathway_cancer_confirmed_not:
+    - name: Actions to take if cancer is not confirmed.
+    - depends:
+      - required:
+        - pathway_cancer_confirmed_not
+    - actions:
+      - required:
+        - pathway_discharge
+
+  pathway_cancer_confirmed:
+    - name: Actions to take if cancer is confirmed.
+    - depends:
+      - required:
+        - pathway_cancer_confirmed
+    - actions:
+      - required:
+        - pathway_booking_office_cancer_confirmed
+
+  pathway_booking_office_cancer_confirmed:
+    - name: Actions the Booking Office takes when cancer is confirmed.
+    - depends:
+      - required:
+        - pathway_cancer_confirmed
+    - actions:
+      - required:
+        - pathway_diagnosis_management_clinic
+        - pathway_inform_patient
+
+  pathway_diagnosis_management_clinic:
+    - name: The clinic where the diagnosis and management options are discussed with the patient.
+    - depends:
+      - required:
+        - pathway_booking_office_cancer_confirmed
+    - actions:
+      - required:
+        - pathway_investigations
+        - pathway_referrals
+
+  pathway_investigations:
+    - name: All the possible investigations that *may* occur. Needs to be at least one (otherwise) why?
+    - depends:
+      - required: pathway_diagnosis_management_clinic
+    - actions:
+      - optional_inclusive:
+        - pathway_investigations_pet_ct
+        - pathway_investigations_ct_thorax
+        - pathway_investigations_mri_head
+        - pathway_investigations_chest_xray
+        - pathway_investigations_ebus
+        - pathway_investigations_bronchoscopy
+        - pathway_investigations_ct_guided_biopsy
+        - pathway_investigations_fine_needle_aspiration
+        - pathway_investigations_pleural_tap
+        - pathway_investigations_lung_function_testing
+        - pathway_investigations_electrocardiogram
+        - pathway_investigations_cardiopulmonary_exercise_testing
+        - pathway_investigations_routine_bloods
+  
+  pathway_investigations_pet_ct:
+    - name: Pathway PET CT investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_ct_thorax:
+    - name: Pathway CT Thorax investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_mri_head:
+    - name: Pathway MRI Head investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_chest_xray:
+    - name: Pathway chest X-ray investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_ebus:
+    - name: Pathway EBUS investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_bronchoscopy:
+    - name: Pathway bronchoscopy investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_ct_guided_biopsy:
+    - name: Pathway CT guided biopsy investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_fine_needle_aspiration:
+    - name: Pathway fine needle aspiration investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_pleural_tap:
+    - name: Pathway pleural tap investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_lung_function_testing:
+    - name: Pathway lung function investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_electrocardiogram:
+    - name: Pathway electrocardiogram investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_cardiopulmonary_exercise_testing:
+    - name: Pathway cardiopulmonary exercise testing investigation
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+      
+  pathway_investigations_routine_bloods:
+    - name: Pathway routine bloods investigation.
+    - depends:
+      - required:
+        - pathway_investigations
+    - actions:
+      - required:
+        - pathway_investigations_results
+
+  pathway_investigations_results:
+    - name: The results from the investigations
+    - depends:
+      - optional_inclusive:
+        - pathway_investigations_pet_ct
+        - pathway_investigations_ct_thorax
+        - pathway_investigations_mri_head
+        - pathway_investigations_chest_xray
+        - pathway_investigations_ebus
+        - pathway_investigations_bronchoscopy
+        - pathway_investigations_ct_guided_biopsy
+        - pathway_investigations_fine_needle_aspiration
+        - pathway_investigations_pleural_tap
+        - pathway_investigations_lung_function_testing
+        - pathway_investigations_electrocardiogram
+        - pathway_investigations_cardiopulmonary_exercise_testing
+        - pathway_investigations_routine_bloods
+    - actions:
+      - required:
+        - pathway_mdt
+
+  pathway_mdt:
+    - name: The MDT
+    - depends:
+      - required: pathway_investigations_results
+    - actions:
+      - required:
+        - pathway_mdt_treatment_decision
+      - optional:
+        - pathway_genetic_testing
+
+  pathway_genetic_testing:
+    - name: Genetic testing of the cancer
+    - depends:
+      - required:
+        - pathway_mdt
+    - actions:
+      - required:
+        - pathway_genetic_testing_report
+
+  pathway_genetic_testing_report:
+    - name: Report from the genetic testing
+    - depends:
+      - required: pathway_genetic_testing
+    - actions:
+      - required:
+        - pathway_mdt
+
+  pathway_mdt_treatment_decision:
+    - name: The decisions made at the MDT for how the patient will be treated.
+    - depends:
+      - required:
+        - pathway_mdt
+    - actions:
+      - optional_exclusive:
+        - pathway_treatment_clinic_bookings
+        - pathway_discharge
+
+  pathway_treatment_clinic_bookings:
+    - name: Based on the MDT decision various treatment clinics are booked.
+    - depends:
+      - required:
+        - pathway_mdt_treatment_decision
+    - actions:
+      - optional_inclusive:
+        - pathway_treatment_clinic_respiratory
+        - pathway_treatment_clinic_oncologist
+        - pathway_treatment_clinic_thoracic_surgeon
+
+  pathway_treatment_clinic_respiratory:
+    - name: Clinic where respiratory treatment options are discussed and agreed
+    - depends:
+      - required:
+        - pathway_treatment_clinic_respiratory
+    - actions:
+      - required:
+        - pathway_treatment_clinic_respiratory_treatment
+
+  pathway_treatment_clinic_oncologist:
+    - name: Clinic where oncology treatment options are discussed and agreed
+    - depends:
+      - required:
+        - pathway_treatment_clinic_oncologist
+    - actions:
+      - required:
+        - pathway_treatment_clinic_oncologist_treatment
+
+  pathway_treatment_clinic_thoracic_surgeon:
+    - name: Clinic where surgical treatment options are discussed and agreed
+    - depends:
+      - required:
+        - pathway_treatment_clinic_thoracic_surgeon
+    - actions:
+      - required:
+        - pathway_treatment_clinic_thoracic_surgeon_treatment
+
+  pathway_treatment_clinic_respiratory_treatment:
+    - name: Respiratory treatment
+    - depends:
+      - required: 
+        - pathway_treatment_clinic_respiratory
+    - actions:
+      - optional_exclusive:
+        - pathway_follow-up_clinics
+
+  pathway_treatment_clinic_oncologist_treatment:
+    - name: Oncology treatment
+    - depends:
+      - required: 
+        - pathway_treatment_clinic_oncologist
+    - actions:
+      - optional_exclusive:
+        - pathway_follow-up_clinics
+
+  pathway_treatment_clinic_thoracic_surgeon_treatment:
+    - name: Surgical treatment
+    - depends:
+      - required: 
+        - pathway_treatment_clinic_thoracic_surgeon
+    - actions:
+      - optional_exclusive:
+        - pathway_follow-up_clinics
+
+  pathway_follow-up_clinics:
+    - name: Post-treatment follow-up clinics.
+    - depends:
+      - optional_inclusive:
+        - pathway_treatment_clinic_respiratory_treatment
+        - pathway_treatment_clinic_oncologist_treatment
+        - pathway_treatment_clinic_thoracic_surgeon_treatment
+    - actions:
+      - optional_exclusive:
+        - pathway_follow-up_clinics
+        - pathway_mdt
+        - pathway_discharge
+
+  pathway_referrals:
+    - name: All the possible referrals to other services that may occur in the pathway.
+    - depends:
+      - required:
+        - pathway_diagnosis_management_clinic
+    - actions:
+      - optional:
+        - pathway_referrals_smoking_cessation
+        - pathway_referrals_prehab
+        - pathway_referrals_dietician
+
+  pathway_discharge:
+    - name: Discharge from service
+    - depends:
+      - optional_inclusive:
+        - pathway_triage_cancer_suspected_not
+        - pathway_mdt_treatment_decision
+        - pathway_follow-up_clinics
+    - actions:
+      - required:
+        - end
+
+  end:
+    - name: End
+    - depends: 
+      - optional_inclusive: 
+        - gp_discharge
+        - pathway_discharge
+    - actions:
+      - required:
+        - None
