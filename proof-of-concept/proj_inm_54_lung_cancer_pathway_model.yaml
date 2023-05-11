@@ -37,6 +37,25 @@ version: 0.1
 # Actions [actions:] occur (are initiated) only when the dependency [depends:]
 # conditions are fulfilled.
 
+# Need to deal with a new use-case "loops"
+# "Consider I no longer need this dependency" -- or a how to resolve repeating testing/loops
+
+# Need to be able to refer to other pathways and generate combined pathway ...
+
+# ? Use the `mermaid` library to automatically generate the diagram.
+
+# Encapsulation of the file ... to give context ... parametrised loading ...
+
+# Need concept of time ...
+
+# Charlie's suggestions:
+# Given set of pathways can you see ...where failing
+# Set of time frames; know meeting requirements
+# Take the spec and generate mermaid
+# Generate diagram that shows ... running late
+# How do you specify what the patient is done ... ?
+# Parachuting a patient into a state ... i.e. miss diagnosis and go straight to tx.
+
 steps:
   start:
     - name: Patient with lung cancer symptoms
